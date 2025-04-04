@@ -19,7 +19,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen pb-16">
       {/* Top header with icons */}
       <header className="bg-white py-3 px-4 flex justify-between items-center shadow-sm z-10">
         <h1 className="text-xl font-bold text-blue-500">KachingKo</h1>

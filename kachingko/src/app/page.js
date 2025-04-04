@@ -1,14 +1,18 @@
 "use client"
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { CameraIcon, ChartBarIcon, GiftIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
 import { ClockIcon, CogIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Footer from './components/Footer';
+
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('scan');
+  const router = useRouter();
+  const pathname = usePathname();
   const webcamRef = useRef(null);
   const fileInputRef = useRef(null);
   const [capturedImage, setCapturedImage] = useState(null);
@@ -17,6 +21,8 @@ export default function Dashboard() {
   const [showResults, setShowResults] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [captureMethod, setCaptureMethod] = useState('camera'); // 'camera' or 'upload'
+  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]); // Default to today
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
   // Initialize Gemini API - replace with your actual API key
   const genAI = new GoogleGenerativeAI("");
@@ -52,6 +58,7 @@ export default function Dashboard() {
     setReceiptItems([]);
     setShowResults(false);
     setErrorMessage('');
+    setShowDatePicker(false);
   };
 
   const confirmPhoto = async () => {
@@ -85,20 +92,23 @@ export default function Dashboard() {
         }
       };
       
-      // Create a more explicit prompt for the model
+      // Updated prompt for Philippine Peso and item code inference
       const prompt = `
         Extract the receipt information from this image.
         
         I need you to:
         1. Identify individual items purchased
-        2. Extract the price for each item
+        2. Extract the price for each item in Philippine Pesos (₱)
         3. Categorize each item (e.g., Groceries, Electronics, Restaurant)
+        4. If an item is represented by a code or abbreviation, infer what the actual product is
+        
+        For example, if you see "ITM123" or any abbreviated code, try to determine what product it actually represents based on context, price, and category.
         
         Return ONLY a valid JSON object with this structure:
         {
           "items": [
             {
-              "name": "Item name",
+              "name": "Actual product name (not code)",
               "price": 10.99,
               "category": "Category name"
             },
@@ -106,7 +116,8 @@ export default function Dashboard() {
           ]
         }
         
-        Do not include any explanation or text outside of the JSON structure. 
+        Prices should be in Philippine Pesos, but don't include the ₱ symbol in the price value (just the number).
+        Do not include any explanation or text outside of the JSON structure.
         The response must be parseable as JSON.
       `;
       
@@ -179,8 +190,45 @@ export default function Dashboard() {
     }
   };
 
+  const addToExpenses = () => {
+    // Create expense object with items and date
+    const expense = {
+      date: expenseDate,
+      items: receiptItems,
+      total: receiptItems.reduce((sum, item) => sum + item.price, 0),
+      timestamp: new Date().toISOString()
+    };
+    
+    // Get existing expenses from localStorage or initialize empty array
+    const existingExpenses = JSON.parse(localStorage.getItem('kachingko-expenses') || '[]');
+    
+    // Add new expense to array
+    const updatedExpenses = [...existingExpenses, expense];
+    
+    // Save back to localStorage
+    localStorage.setItem('kachingko-expenses', JSON.stringify(updatedExpenses));
+    
+    // Provide feedback
+    alert('Expense added successfully!');
+    
+    // Navigate to the budget page to show the updated data
+    router.push('/smart-budget');
+  };
+
+  // Handle tab navigation
+  const handleTabChange = (path) => {
+    router.push(path);
+  };
+
+  // Helper function to determine active tab based on current pathname
+  const isActiveTab = (path) => {
+    if (path === '/' && pathname === '/') return true;
+    if (path !== '/' && pathname.startsWith(path)) return true;
+    return false;
+  };
+
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen pb-16">
       {/* Top header with icons */}
       <header className="bg-white py-3 px-4 flex justify-between items-center shadow-sm z-10">
         <h1 className="text-xl font-bold text-blue-500">KachingKo</h1>
@@ -194,185 +242,172 @@ export default function Dashboard() {
         </div>
       </header>
       
-      {/* Main content area */}
-      <main className="flex-grow flex flex-col">
-        {activeTab === 'scan' && (
-          <>
-            {!capturedImage ? (
-              <div className="relative flex-grow flex flex-col items-center justify-center bg-black">
-                <Webcam
-                  audio={false}
-                  ref={webcamRef}
-                  screenshotFormat="image/jpeg"
-                  videoConstraints={{
-                    facingMode: "environment" // Use the back camera if available
-                  }}
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Hidden file input for image upload */}
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                
-                {/* Capture and upload buttons */}
-                <div className="absolute bottom-6 flex space-x-4 items-center">
-                  <button 
-                    onClick={triggerFileInput}
-                    className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg"
-                  >
-                    <ArrowUpTrayIcon className="w-6 h-6 text-blue-500" />
-                  </button>
-                  <button 
-                    onClick={capture}
-                    className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg"
-                  >
-                    <CameraIcon className="w-8 h-8 text-blue-500" />
-                  </button>
-                </div>
-                
-                {/* Helper text */}
-                <div className="absolute top-4 left-0 right-0 text-center">
-                  <p className="text-white bg-black bg-opacity-50 inline-block px-4 py-2 rounded-lg">
-                    Position receipt in frame or upload an image
-                  </p>
-                </div>
+      {/* Main content area - only render the scanner UI when on the home page */}
+      {pathname === '/' && (
+        <main className="flex-grow flex flex-col">
+          {!capturedImage ? (
+            <div className="relative flex-grow flex flex-col items-center justify-center bg-black">
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                videoConstraints={{
+                  facingMode: "environment" // Use the back camera if available
+                }}
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Hidden file input for image upload */}
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              
+              {/* Capture and upload buttons */}
+              <div className="absolute bottom-6 flex space-x-4 items-center">
+                <button 
+                  onClick={triggerFileInput}
+                  className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg"
+                >
+                  <ArrowUpTrayIcon className="w-6 h-6 text-blue-500" />
+                </button>
+                <button 
+                  onClick={capture}
+                  className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg"
+                >
+                  <CameraIcon className="w-8 h-8 text-blue-500" />
+                </button>
               </div>
-            ) : showResults ? (
-              <div className="flex-grow p-4 overflow-auto">
-                <h2 className="text-xl font-bold mb-4">Receipt Items</h2>
-                
-                {errorMessage && (
-                  <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
-                    <p>{errorMessage}</p>
-                  </div>
-                )}
-                
-                {receiptItems.length > 0 ? (
-                  <div className="space-y-3">
-                    {receiptItems.map((item, index) => (
-                      <div key={index} className="bg-white p-3 rounded-lg shadow flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-xs text-gray-500">{item.category}</p>
-                        </div>
-                        <p className="font-semibold">${item.price.toFixed(2)}</p>
+              
+              {/* Helper text */}
+              <div className="absolute top-4 left-0 right-0 text-center">
+                <p className="text-white bg-black bg-opacity-50 inline-block px-4 py-2 rounded-lg">
+                  Position receipt in frame or upload an image
+                </p>
+              </div>
+            </div>
+          ) : showResults ? (
+            <div className="flex-grow p-4 overflow-auto">
+              <h2 className="text-xl font-bold mb-4">Receipt Items</h2>
+              
+              {errorMessage && (
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+                  <p>{errorMessage}</p>
+                </div>
+              )}
+              
+              {receiptItems.length > 0 ? (
+                <div className="space-y-3">
+                  {receiptItems.map((item, index) => (
+                    <div key={index} className="bg-white p-3 rounded-lg shadow flex justify-between items-center text-black">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-xs text-black-500">{item.category}</p>
                       </div>
-                    ))}
-                    
-                    <div className="pt-3 border-t mt-4">
-                      <div className="flex justify-between font-bold">
-                        <span>Total</span>
-                        <span>${receiptItems.reduce((sum, item) => sum + item.price, 0).toFixed(2)}</span>
-                      </div>
+                      <p className="font-semibold">₱{item.price.toFixed(2)}</p>
                     </div>
-                    
-                    <button 
-                      onClick={retakePhoto}
-                      className="mt-4 w-full bg-blue-500 text-white py-2 rounded-lg"
-                    >
-                      Scan Another Receipt
-                    </button>
+                  ))}
+                  
+                  <div className="pt-3 border-t mt-4">
+                    <div className="flex justify-between font-bold">
+                      <span>Total</span>
+                      <span>₱{receiptItems.reduce((sum, item) => sum + item.price, 0).toFixed(2)}</span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-center p-6">
-                    <p>No items detected. Try scanning again.</p>
-                    <button 
-                      onClick={retakePhoto}
-                      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-                    >
-                      Scan Again
-                    </button>
+                  
+                  {/* Date picker and Add to expense button */}
+                  <div className="mt-4">
+                    {showDatePicker ? (
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Expense Date
+                        </label>
+                        <input 
+                          type="date" 
+                          value={expenseDate}
+                          onChange={(e) => setExpenseDate(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md"
+                        />
+                        
+                        <button 
+                          onClick={addToExpenses}
+                          className="mt-2 w-full bg-green-500 text-white py-2 rounded-lg"
+                        >
+                          Confirm
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setShowDatePicker(true)}
+                        className="w-full bg-green-500 text-white py-2 rounded-lg"
+                      >
+                        Add to Expense
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="relative flex-grow">
-                {/* Display captured image */}
-                <img 
-                  src={capturedImage} 
-                  alt="Captured receipt" 
-                  className="w-full h-full object-contain bg-black"
-                />
-                
-                {/* Confirmation overlay */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-4">
-                  <div className="flex justify-center space-x-8">
-                    <button 
-                      onClick={retakePhoto}
-                      className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-lg"
-                      disabled={isProcessing}
-                    >
-                      <XMarkIcon className="w-6 h-6 text-white" />
-                    </button>
-                    <button 
-                      onClick={confirmPhoto}
-                      className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg"
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? (
-                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        <CheckIcon className="w-6 h-6 text-white" />
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-white text-center mt-2">
-                    {isProcessing ? "Processing receipt..." : "Use this photo?"}
-                  </p>
+                  
+                  <button 
+                    onClick={retakePhoto}
+                    className="w-full bg-blue-500 text-white py-2 rounded-lg"
+                  >
+                    Scan Another Receipt
+                  </button>
                 </div>
+              ) : (
+                <div className="text-center p-6">
+                  <p>No items detected. Try scanning again.</p>
+                  <button 
+                    onClick={retakePhoto}
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
+                  >
+                    Scan Again
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative flex-grow">
+              {/* Display captured image */}
+              <img 
+                src={capturedImage} 
+                alt="Captured receipt" 
+                className="w-full h-full object-contain bg-black"
+              />
+              
+              {/* Confirmation overlay */}
+              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-4">
+                <div className="flex justify-center space-x-8">
+                  <button 
+                    onClick={retakePhoto}
+                    className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-lg"
+                    disabled={isProcessing}
+                  >
+                    <XMarkIcon className="w-6 h-6 text-white" />
+                  </button>
+                  <button 
+                    onClick={confirmPhoto}
+                    className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shadow-lg"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <CheckIcon className="w-6 h-6 text-white" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-white text-center mt-2">
+                  {isProcessing ? "Processing receipt..." : "Use this photo?"}
+                </p>
               </div>
-            )}
-          </>
-        )}
-        
-        {activeTab === 'budget' && (
-          <div className="flex-grow p-6">
-            <h2 className="text-2xl font-bold mb-4">Your Budget</h2>
-            <p className="text-gray-600">Budget information will be displayed here.</p>
-          </div>
-        )}
-        
-        {activeTab === 'rewards' && (
-          <div className="flex-grow p-6">
-            <h2 className="text-2xl font-bold mb-4">Your Rewards</h2>
-            <p className="text-gray-600">Rewards information will be displayed here.</p>
-          </div>
-        )}
-      </main>
-      
-      {/* Bottom navigation */}
-      <nav className="bg-white border-t border-gray-200">
-        <div className="flex justify-around">
-          <button 
-            onClick={() => setActiveTab('scan')}
-            className={`flex flex-col items-center py-3 px-6 ${activeTab === 'scan' ? 'text-blue-500' : 'text-gray-500'}`}
-          >
-            <CameraIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Scan</span>
-          </button>
-          
-          <button 
-            onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center py-3 px-6 ${activeTab === 'budget' ? 'text-blue-500' : 'text-gray-500'}`}
-          >
-            <ChartBarIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Budget</span>
-          </button>
-          
-          <button 
-            onClick={() => setActiveTab('rewards')}
-            className={`flex flex-col items-center py-3 px-6 ${activeTab === 'rewards' ? 'text-blue-500' : 'text-gray-500'}`}
-          >
-            <GiftIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Rewards</span>
-          </button>
-        </div>
-      </nav>
+            </div>
+          )}
+        </main>
+      )}
+      <Footer />
     </div>
   );
 }
