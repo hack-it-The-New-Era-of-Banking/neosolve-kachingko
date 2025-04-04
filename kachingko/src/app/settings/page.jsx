@@ -1,110 +1,159 @@
 "use client"
 
-import { useState, useRef } from 'react';
-import Webcam from 'react-webcam';
-import { CameraIcon, ChartBarIcon, GiftIcon } from '@heroicons/react/24/solid';
-import { ClockIcon, CogIcon } from '@heroicons/react/24/outline';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import Footer from '../components/Footer';
 
-export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('scan');
-  const webcamRef = useRef(null);
+export default function Settings() {
+  const [budgetLimit, setBudgetLimit] = useState(15000);
+  const [theme, setTheme] = useState('light');
+  const [currency, setCurrency] = useState('PHP');
+  const [notifications, setNotifications] = useState(true);
+  const [isClient, setIsClient] = useState(false);
   
-  const capture = () => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    // Here you would process the image with your receipt scanning logic
-    console.log("Image captured:", imageSrc);
-    // For a hackathon demo, you could navigate to a "processing" screen
-    // or simulate receipt analysis
+  useEffect(() => {
+    // Load settings from localStorage
+    const savedBudgetLimit = localStorage.getItem('kachingko-budget-limit');
+    if (savedBudgetLimit) {
+      const parsedBudget = JSON.parse(savedBudgetLimit);
+      setBudgetLimit(parsedBudget.target);
+    }
+    
+    const savedTheme = localStorage.getItem('kachingko-theme');
+    if (savedTheme) setTheme(savedTheme);
+    
+    const savedCurrency = localStorage.getItem('kachingko-currency');
+    if (savedCurrency) setCurrency(savedCurrency);
+    
+    const savedNotifications = localStorage.getItem('kachingko-notifications');
+    if (savedNotifications !== null) setNotifications(JSON.parse(savedNotifications));
+    
+    setIsClient(true);
+  }, []);
+  
+  const handleSaveSettings = () => {
+    // Save budget limit
+    const budgetLimitObj = {
+      description: "Monthly Spending Limit",
+      target: budgetLimit
+    };
+    localStorage.setItem('kachingko-budget-limit', JSON.stringify(budgetLimitObj));
+    
+    // Save other settings
+    localStorage.setItem('kachingko-theme', theme);
+    localStorage.setItem('kachingko-currency', currency);
+    localStorage.setItem('kachingko-notifications', JSON.stringify(notifications));
+    
+    // Show saved message
+    alert('Settings saved successfully!');
+  };
+  
+  const handleClearData = () => {
+    if (confirm('Are you sure you want to clear all your data? This action cannot be undone.')) {
+      localStorage.removeItem('kachingko-expenses');
+      alert('All expense data has been cleared.');
+    }
   };
 
   return (
-    <div className="flex flex-col h-screen pb-16">
-      {/* Top header with icons */}
-      <header className="bg-white py-3 px-4 flex justify-between items-center shadow-sm z-10">
-        <h1 className="text-xl font-bold text-blue-500">KachingKo</h1>
-        <div className="flex items-center space-x-4">
-          <Link href="/history" className="p-2">
-            <ClockIcon className="w-6 h-6 text-gray-600" />
-          </Link>
-          <Link href="/settings" className="p-2">
-            <CogIcon className="w-6 h-6 text-gray-600" />
-          </Link>
-        </div>
+    <div className="min-h-screen pb-16 bg-gray-50">
+      <header className="bg-white py-3 px-4 shadow-sm">
+        <h1 className="text-xl font-bold text-blue-500">Settings</h1>
       </header>
       
-      {/* Rest of your component remains the same */}
-      <main className="flex-grow flex flex-col">
-        {activeTab === 'scan' ? (
-          <div className="relative flex-grow flex flex-col items-center justify-center bg-black">
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              videoConstraints={{
-                facingMode: "environment" // Use the back camera if available
-              }}
-              className="w-full h-full object-cover"
-            />
+      <main className="p-4">
+        <div className="space-y-4">
+          {/* Budget Settings */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="text-lg font-bold text-black mb-4">Budget Settings</h2>
             
-            {/* Capture button */}
-            <div className="absolute bottom-6">
-              <button 
-                onClick={capture}
-                className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg"
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-1">
+                Monthly Budget Limit (₱)
+              </label>
+              <input 
+                type="number" 
+                value={budgetLimit}
+                onChange={(e) => setBudgetLimit(parseFloat(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded-md"
+                min="1"
+              />
+            </div>
+          </div>
+          
+          {/* App Settings */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="text-lg font-bold text-black mb-4">App Settings</h2>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-1">
+                Theme
+              </label>
+              <select 
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md"
               >
-                <CameraIcon className="w-8 h-8 text-blue-500" />
-              </button>
+                <option value="light">Light Mode</option>
+                <option value="dark">Dark Mode</option>
+                <option value="system">System Default</option>
+              </select>
             </div>
             
-            {/* Helper text */}
-            <div className="absolute top-4 left-0 right-0 text-center">
-              <p className="text-white bg-black bg-opacity-50 inline-block px-4 py-2 rounded-lg">
-                Position receipt in frame and tap the camera button
-              </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-black mb-1">
+                Currency
+              </label>
+              <select 
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="PHP">Philippine Peso (₱)</option>
+                <option value="USD">US Dollar ($)</option>
+                <option value="EUR">Euro (€)</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center mb-4">
+              <input 
+                type="checkbox" 
+                id="notifications"
+                checked={notifications}
+                onChange={(e) => setNotifications(e.target.checked)}
+                className="h-4 w-4 text-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="notifications" className="ml-2 text-sm text-black">
+                Enable notifications
+              </label>
             </div>
           </div>
-        ) : activeTab === 'budget' ? (
-          <div className="flex-grow p-6">
-            <h2 className="text-2xl font-bold mb-4">Your Budget</h2>
-            <p className="text-gray-600">Budget information will be displayed here.</p>
-          </div>
-        ) : (
-          <div className="flex-grow p-6">
-            <h2 className="text-2xl font-bold mb-4">Your Rewards</h2>
-            <p className="text-gray-600">Rewards information will be displayed here.</p>
-          </div>
-        )}
-      </main>
-      
-      {/* Bottom navigation */}
-      <nav className="bg-white border-t border-gray-200">
-        <div className="flex justify-around">
-          <button 
-            onClick={() => setActiveTab('scan')}
-            className={`flex flex-col items-center py-3 px-6 ${activeTab === 'scan' ? 'text-blue-500' : 'text-gray-500'}`}
-          >
-            <CameraIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Scan</span>
-          </button>
           
-          <button 
-            onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center py-3 px-6 ${activeTab === 'budget' ? 'text-blue-500' : 'text-gray-500'}`}
-          >
-            <ChartBarIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Budget</span>
-          </button>
+          {/* Data Management */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <h2 className="text-lg font-bold text-black mb-4">Data Management</h2>
+            
+            <button 
+              onClick={handleClearData}
+              className="w-full p-2 bg-red-500 text-white rounded-md hover:bg-red-600 mb-2"
+            >
+              Clear All Data
+            </button>
+            <p className="text-xs text-gray-500 text-center">
+              This will permanently delete all your expense data.
+            </p>
+          </div>
           
+          {/* Save Button */}
           <button 
-            onClick={() => setActiveTab('rewards')}
-            className={`flex flex-col items-center py-3 px-6 ${activeTab === 'rewards' ? 'text-blue-500' : 'text-gray-500'}`}
+            onClick={handleSaveSettings}
+            className="w-full p-3 bg-blue-500 text-white rounded-md hover:bg-blue-600"
           >
-            <GiftIcon className="w-6 h-6" />
-            <span className="text-xs mt-1">Rewards</span>
+            Save Settings
           </button>
         </div>
-      </nav>
+      </main>
+      
+      <Footer />
     </div>
   );
 }

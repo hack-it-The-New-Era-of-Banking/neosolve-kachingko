@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { CameraIcon, ChartBarIcon, GiftIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
-import { ClockIcon, CogIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, CogIcon, CheckIcon, XMarkIcon, TrophyIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Footer from './components/Footer';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 export default function Dashboard() {
@@ -23,9 +24,10 @@ export default function Dashboard() {
   const [captureMethod, setCaptureMethod] = useState('camera'); // 'camera' or 'upload'
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]); // Default to today
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showMotivationalPopup, setShowMotivationalPopup] = useState(false);
   
   // Initialize Gemini API - replace with your actual API key
-  const genAI = new GoogleGenerativeAI("");
+  const genAI = new GoogleGenerativeAI("AIzaSyAYxikwF6TfYAbmq9PXMR8lP-HaTnq_jvo");
 
   const capture = () => {
     const imageSrc = webcamRef.current.getScreenshot();
@@ -208,10 +210,14 @@ export default function Dashboard() {
     // Save back to localStorage
     localStorage.setItem('kachingko-expenses', JSON.stringify(updatedExpenses));
     
-    // Provide feedback
-    alert('Expense added successfully!');
-    
-    // Navigate to the budget page to show the updated data
+    // Show motivational popup instead of alert
+    setShowDatePicker(false);
+    setShowMotivationalPopup(true);
+  };
+
+  // Close popup and navigate to budget page
+  const closePopup = () => {
+    setShowMotivationalPopup(false);
     router.push('/smart-budget');
   };
 
@@ -407,6 +413,70 @@ export default function Dashboard() {
           )}
         </main>
       )}
+      
+      {/* Motivational Popup */}
+      <AnimatePresence>
+        {showMotivationalPopup && (
+          <motion.div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closePopup}
+          >
+            <motion.div 
+              className="bg-white rounded-xl p-6 max-w-sm text-center shadow-xl"
+              initial={{ scale: 0.8, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <motion.div
+                initial={{ scale: 0.5, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 260, 
+                  damping: 20, 
+                  delay: 0.2 
+                }}
+                className="flex justify-center mb-6"
+              >
+                <TrophyIcon className="w-20 h-20 text-yellow-500" />
+              </motion.div>
+              
+              <motion.h2 
+                className="text-xl font-bold text-black mb-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                Great job tracking your expense!
+              </motion.h2>
+              
+              <motion.p 
+                className="text-gray-700 mb-6"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                You are likely to crush your financial goals if you consistently track your expenses.
+              </motion.p>
+              
+              <motion.button
+                className="bg-blue-500 text-white font-medium py-2 px-6 rounded-lg hover:bg-blue-600"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={closePopup}
+              >
+                Continue
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
       <Footer />
     </div>
   );

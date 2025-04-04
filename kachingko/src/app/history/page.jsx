@@ -1,44 +1,78 @@
+"use client"
+
+import { useState, useEffect } from 'react';
+import Footer from '../components/Footer';
+
 export default function History() {
+  const [expenses, setExpenses] = useState([]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    // Get expenses from localStorage
+    const savedExpenses = JSON.parse(localStorage.getItem('kachingko-expenses') || '[]');
+    
+    // Sort by date, newest first
+    savedExpenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    setExpenses(savedExpenses);
+    setIsClient(true);
+  }, []);
+
+  const formatDate = (dateString) => {
+    if (!isClient) return dateString;
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
   return (
-    <div className="min-h-screen p-8">
-      <header className="mb-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Transaction History</h1>
-          <a 
-            href="/"
-            className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-          >
-            Back to Dashboard
-          </a>
-        </div>
+    <div className="min-h-screen pb-16 bg-gray-50">
+      <header className="bg-white py-3 px-4 shadow-sm">
+        <h1 className="text-xl font-bold text-blue-500">Receipt History</h1>
       </header>
       
-      <main className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
-        
-        {/* Sample transaction list - replace with actual data */}
-        <div className="space-y-4">
-          <div className="border-b dark:border-gray-700 pb-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-medium">Grocery Shopping</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">March 15, 2024</p>
+      <main className="p-4">
+        {expenses.length > 0 ? (
+          <div className="space-y-4">
+            {expenses.map((expense, index) => (
+              <div key={index} className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="p-4 bg-blue-50 flex justify-between items-center">
+                  <div>
+                    <h2 className="font-semibold text-black">{formatDate(expense.date)}</h2>
+                    <p className="text-sm text-gray-600">{expense.items.length} items</p>
+                  </div>
+                  <div>
+                    <span className="font-bold text-black">₱{expense.total.toFixed(2)}</span>
+                  </div>
+                </div>
+                
+                <div className="divide-y">
+                  {expense.items.map((item, itemIndex) => (
+                    <div key={itemIndex} className="p-3 flex justify-between text-black">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-xs text-gray-500">{item.category}</p>
+                      </div>
+                      <p className="font-semibold">₱{item.price.toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <span className="text-red-500">-$85.50</span>
-            </div>
+            ))}
           </div>
-          
-          <div className="border-b dark:border-gray-700 pb-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-medium">Salary Deposit</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">March 14, 2024</p>
-              </div>
-              <span className="text-green-500">+$2,500.00</span>
-            </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <p className="text-gray-600 mb-4">No receipts found in your history.</p>
+            <p className="text-gray-500 text-sm">Start scanning receipts to build your history.</p>
           </div>
-        </div>
+        )}
       </main>
+      
+      <Footer />
     </div>
   );
 }
