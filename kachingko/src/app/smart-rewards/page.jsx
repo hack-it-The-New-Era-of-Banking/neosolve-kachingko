@@ -107,8 +107,8 @@ export default function SmartRewards() {
       
       <main className="flex-grow p-4">
         <div className="space-y-6">
-          <div className="card bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-4 rounded-xl">
-            <h2 className="text-sm font-medium opacity-80">KachingPoints</h2>
+          <div className="card bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-xl">
+          <h2 className="text-sm font-medium opacity-80">KachingPoints</h2>
             <p className="text-3xl font-bold mt-1">{points}</p>
             <p className="text-xs mt-2 opacity-80">Earn 1 point for every milestone of your financial journey.</p>
           </div>

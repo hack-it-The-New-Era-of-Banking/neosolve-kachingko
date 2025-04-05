@@ -506,18 +506,18 @@ const getSpendingInsights = () => {
       )}
       
       {/* Expense categories pie chart */}
-      <div className="m-4 p-4 bg-white rounded-lg shadow">
-        <h2 className="text-lg font-medium mb-4 text-black">
-          {selectedDate 
-            ? `Expense Categories for ${isClient ? new Date(selectedDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}) : selectedDate}`
-            : 'Overall Expense Categories'
-          }
-        </h2>
-        <div className="h-64">
-          {isClient && <Pie data={chartData} options={chartOptions} />}
-          {!isClient && <div className="w-full h-full flex items-center justify-center text-black">Loading chart...</div>}
+        <div className="m-4 p-4 bg-white rounded-lg shadow">
+          <h2 className="text-lg font-medium mb-4 text-black text-center">
+            {selectedDate 
+              ? `Expense Categories for ${isClient ? new Date(selectedDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}) : selectedDate}`
+              : 'Overall Expense Categories'
+            }
+          </h2>
+          <div className="h-64 flex justify-center items-center">
+            {isClient && <Pie data={chartData} options={chartOptions} />}
+            {!isClient && <div className="w-full h-full flex items-center justify-center text-black">Loading chart...</div>}
+          </div>
         </div>
-      </div>
 
       {/* Budget Limit instead of Financial Goal */}
       <div className="m-4 p-4 bg-white rounded-lg shadow">

@@ -235,9 +235,19 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col h-screen pb-16">
-      {/* Top header with icons */}
+      {/* Top header with logo and icons */}
       <header className="bg-white py-3 px-4 flex justify-between items-center shadow-sm z-10">
-        <h1 className="text-xl font-bold text-blue-500">KachingKo</h1>
+        <div className="flex items-center">
+          <img 
+            src="/images/kachingko_logo.png" 
+            alt="KachingKo Logo" 
+            className="h-12 w-auto mr-2" 
+          />
+          <div>
+            <h1 className="text-xl font-bold text-blue-500">KachingKo</h1>
+            <p className="text-xs text-gray-500">by NeoSolve 2025</p>
+          </div>
+        </div>
         <div className="flex items-center space-x-4">
           <Link href="/history" className="p-2">
             <ClockIcon className="w-6 h-6 text-gray-600" />
@@ -263,7 +273,21 @@ export default function Dashboard() {
                 className="w-full h-full object-cover"
               />
               
-              {/* Hidden file input for image upload */}
+              {/* Google Lens-like scanning overlay */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[85%] h-[70%] border-2 border-white border-opacity-70 rounded-lg flex flex-col">
+                  {/* Corner accents */}
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-blue-400 rounded-tl-lg"></div>
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-blue-400 rounded-tr-lg"></div>
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-blue-400 rounded-bl-lg"></div>
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-blue-400 rounded-br-lg"></div>
+                  
+                  {/* Scanning animation */}
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-400 animate-scan-vertical"></div>
+                </div>
+              </div>
+              
+              {/* Rest of your camera UI */}
               <input 
                 type="file" 
                 ref={fileInputRef}
@@ -291,7 +315,7 @@ export default function Dashboard() {
               {/* Helper text */}
               <div className="absolute top-4 left-0 right-0 text-center">
                 <p className="text-white bg-black bg-opacity-50 inline-block px-4 py-2 rounded-lg">
-                  Position receipt in frame or upload an image
+                  Position receipt in frame and tap the camera button
                 </p>
               </div>
             </div>
