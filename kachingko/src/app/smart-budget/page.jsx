@@ -4,14 +4,23 @@
 // Add these to your imports
 import { PencilIcon } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
-import { Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Pie, Line } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Title } from 'chart.js';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import Footer from '../components/Footer';
 
 
 // Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(
+  ArcElement, 
+  Tooltip, 
+  Legend, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  Title
+);
 
 export default function SmartBudget() {
   const [expenses, setExpenses] = useState([]);
@@ -20,6 +29,9 @@ export default function SmartBudget() {
 
   // At the top of your component, add:
   const [isClient, setIsClient] = useState(false);
+
+  // Add new state for active chart tab
+  const [activeChartTab, setActiveChartTab] = useState('categories');
 
   // Updated state for budget limit
   const [isEditingGoal, setIsEditingGoal] = useState(false);
@@ -134,6 +146,99 @@ export default function SmartBudget() {
     
     return categories;
   };
+
+  // Prepare 7-day trend data
+const getTrendData = () => {
+  const today = new Date();
+  const last7Days = [];
+  
+  // Create array of last 7 days
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateString = date.toISOString().split('T')[0];
+    last7Days.push({
+      date: dateString,
+      formatted: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      amount: 0
+    });
+  }
+  
+  // Fill in amounts from expense data
+  expenses.forEach(expense => {
+    const expenseDate = expense.date;
+    const dayIndex = last7Days.findIndex(day => day.date === expenseDate);
+    if (dayIndex !== -1) {
+      last7Days[dayIndex].amount += expense.total;
+    }
+  });
+  
+  // Add amounts from calendar dates for days not in expenses
+  calendarDates.forEach(dateInfo => {
+    const dayIndex = last7Days.findIndex(day => day.date === dateInfo.date);
+    if (dayIndex !== -1 && last7Days[dayIndex].amount === 0) {
+      last7Days[dayIndex].amount = dateInfo.amount;
+    }
+  });
+  
+  return last7Days;
+};
+
+// Prepare chart data for line chart
+const trendData = {
+  labels: getTrendData().map(day => day.formatted),
+  datasets: [
+    {
+      label: 'Daily Expenses',
+      data: getTrendData().map(day => day.amount),
+      fill: false,
+      borderColor: 'rgb(59, 130, 246)',
+      tension: 0.1,
+      pointBackgroundColor: 'rgb(59, 130, 246)',
+      pointRadius: 4
+    }
+  ]
+};
+
+// Options for line chart
+const trendOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      callbacks: {
+        label: function(context) {
+          return `₱${context.raw.toFixed(2)}`;
+        }
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: function(value) {
+          return '₱' + value;
+        },
+        color: 'black'
+      },
+      grid: {
+        color: 'rgba(0,0,0,0.1)'
+      }
+    },
+    x: {
+      grid: {
+        display: false
+      },
+      ticks: {
+        color: 'black'
+      }
+    }
+  }
+};
 
   // Use the function to get category data
   const categoryData = calculateCategoryData();
@@ -505,17 +610,48 @@ const getSpendingInsights = () => {
         </div>
       )}
       
-      {/* Expense categories pie chart */}
+      {/* Expense categories with tabs */}
         <div className="m-4 p-4 bg-white rounded-lg shadow">
           <h2 className="text-lg font-medium mb-4 text-black text-center">
             {selectedDate 
-              ? `Expense Categories for ${isClient ? new Date(selectedDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}) : selectedDate}`
-              : 'Overall Expense Categories'
+              ? `Expense Analysis for ${isClient ? new Date(selectedDate).toLocaleDateString('en-US', {month: 'long', day: 'numeric'}) : selectedDate}`
+              : 'Overall Expense Analysis'
             }
           </h2>
+          
+          {/* Tabs */}
+          <div className="flex border-b mb-4">
+            <button 
+              onClick={() => setActiveChartTab('categories')}
+              className={`py-2 px-4 text-sm font-medium ${activeChartTab === 'categories' 
+                ? 'text-blue-500 border-b-2 border-blue-500' 
+                : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Categories
+            </button>
+            <button 
+              onClick={() => setActiveChartTab('trends')}
+              className={`py-2 px-4 text-sm font-medium ${activeChartTab === 'trends' 
+                ? 'text-blue-500 border-b-2 border-blue-500' 
+                : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              7-Day Trend
+            </button>
+          </div>
+          
+          {/* Content based on active tab */}
           <div className="h-64 flex justify-center items-center">
-            {isClient && <Pie data={chartData} options={chartOptions} />}
-            {!isClient && <div className="w-full h-full flex items-center justify-center text-black">Loading chart...</div>}
+            {isClient && activeChartTab === 'categories' && (
+              <Pie data={chartData} options={chartOptions} />
+            )}
+            {isClient && activeChartTab === 'trends' && (
+              <Line data={trendData} options={trendOptions} />
+            )}
+            {!isClient && (
+              <div className="w-full h-full flex items-center justify-center text-black">
+                Loading chart...
+              </div>
+            )}
           </div>
         </div>
 
