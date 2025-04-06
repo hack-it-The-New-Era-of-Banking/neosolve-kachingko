@@ -26,8 +26,8 @@ export default function Dashboard() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMotivationalPopup, setShowMotivationalPopup] = useState(false);
   
-  // Initialize Gemini API - replace with your actual API key
-  const genAI = new GoogleGenerativeAI("AIzaSyAYxikwF6TfYAbmq9PXMR8lP-HaTnq_jvo");
+  // No API Key since this is published in Github
+  const genAI = new GoogleGenerativeAI("");
 
   const capture = () => {
     const imageSrc = webcamRef.current.getScreenshot();
